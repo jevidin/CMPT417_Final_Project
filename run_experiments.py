@@ -25,13 +25,15 @@ def print_locations(my_map, locations):
     for x in range(len(my_map)):
         for y in range(len(my_map[0])):
             if starts_map[x][y] >= 0:
+                if my_map[x][y]:
+                    print(f"IN WALL AT FOR {x} {y}")
                 to_print += str(starts_map[x][y]) + ' '
             elif my_map[x][y]:
                 to_print += '@ '
             else:
                 to_print += '. '
         to_print += '\n'
-    print(to_print)
+    # print(to_print)
 
 
 def import_mapf_instance(filename):
@@ -77,6 +79,8 @@ if __name__ == '__main__':
                         help='Use batch output instead of animation')
     parser.add_argument('--disjoint', action='store_true', default=False,
                         help='Use the disjoint splitting')
+    parser.add_argument('--idcbs', action='store_true', default=False,
+                        help='Run IDCBS')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
 
@@ -94,7 +98,7 @@ if __name__ == '__main__':
         if args.solver == "CBS":
             print("***Run CBS***")
             cbs = CBSSolver(my_map, starts, goals)
-            paths = cbs.find_solution_idcbs(args.disjoint)
+            paths = cbs.find_solution(args.disjoint, args.idcbs)
         elif args.solver == "Independent":
             print("***Run Independent***")
             solver = IndependentSolver(my_map, starts, goals)

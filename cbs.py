@@ -176,16 +176,16 @@ class CBSSolver(object):
 
     def push_node(self, node):
         heapq.heappush(self.open_list, (node['cost'], len(node['collisions']), self.num_of_generated, node))
-        print("Generate node {}".format(self.num_of_generated))
+        # print("Generate node {}".format(self.num_of_generated))
         self.num_of_generated += 1
 
     def pop_node(self):
         _, _, id, node = heapq.heappop(self.open_list)
-        print("Expand node {}".format(id))
+        # print("Expand node {}".format(id))
         self.num_of_expanded += 1
         return node
 
-    def find_solution_idcbs(self, disjoint):
+    def find_solution_idcbs(self):
         # Generate the root node
         # constraints   - list of constraints
         # paths         - list of paths, one for each agent
@@ -205,16 +205,16 @@ class CBSSolver(object):
         root['cost'] = get_sum_of_cost(root['paths'])
         root['collisions'] = detect_collisions(root['paths'])
         threshold = root['cost'] # sum of all path lengths
-
+        self.num_of_generated += 1 # Root node generates
         while True:
-            t = self.search_idcbs(threshold, root['cost'], root, disjoint)
+            t = self.search_idcbs(threshold, root['cost'], root)
             if not isinstance(t, int):
                 if not t['collisions']: # Check if solution is found
                     return t['paths']
             threshold = t
         return
 
-    def search_idcbs(self, threshold, g, node, disjoint):
+    def search_idcbs(self, threshold, g, node):
         p = node
         if p['cost'] > threshold:
             return p['cost']
@@ -250,8 +250,9 @@ class CBSSolver(object):
                 #         continue
                 q['collisions'] = detect_collisions(q['paths'])
                 q['cost'] = get_sum_of_cost(q['paths'])
+                self.num_of_generated += 1
                 # self.push_node(q)
-                t = self.search_idcbs(threshold, g + q['cost'], q, disjoint)
+                t = self.search_idcbs(threshold, g + q['cost'], q)
                 if not isinstance(t, int):
                     if not t['collisions']: # Check if solution is found
                         return t
@@ -262,12 +263,18 @@ class CBSSolver(object):
                 raise BaseException('No Solutions')
         return min_t
 
-    def find_solution(self, disjoint):
+    def find_solution(self, disjoint, idcbs):
         """ Finds paths for all agents from their start locations to their goal locations
 
         disjoint    - use disjoint splitting or not
         """
 
+        if idcbs:
+            print('RUN IDCBS')
+            paths = self.find_solution_idcbs()
+            print(f"nodes generated IDCBS {self.num_of_generated}")
+            return paths
+        print('RUN NORMAL CBS')
         self.start_time = timer.time()
 
         # Generate the root node
@@ -290,12 +297,12 @@ class CBSSolver(object):
         root['collisions'] = detect_collisions(root['paths'])
         self.push_node(root)
 
-        # Task 3.1: Testing
-        print(root['collisions'])
+        # # Task 3.1: Testing
+        # print(root['collisions'])
 
-        # Task 3.2: Testing
-        for collision in root['collisions']:
-            print(standard_splitting(collision))
+        # # Task 3.2: Testing
+        # for collision in root['collisions']:
+        #     print(standard_splitting(collision))
 
         ##############################
         # Task 3.3: High-Level Search
@@ -308,6 +315,7 @@ class CBSSolver(object):
         while len(self.open_list) > 0:
             p = self.pop_node()
             if not p['collisions']:
+                print(f"nodes generated NORMAL CBS {self.num_of_generated}")
                 return p['paths']
             collision = p['collisions'][0]
             if disjoint:
