@@ -65,6 +65,12 @@ def import_mapf_instance(filename):
     for a in range(num_agents):
         line = f.readline()
         sx, sy, gx, gy = [int(x) for x in line.split(' ')]
+        if my_map[sx][sy]:
+            print(f"SKIP IN WALL START {sx} {sy}")
+            continue
+        if my_map[gx][gy]:
+            print(f"SKIP IN WALL GOAL {gx} {gy}")
+            continue
         starts.append((sx, sy))
         goals.append((gx, gy))
     f.close()
@@ -93,8 +99,7 @@ if __name__ == '__main__':
 
         print("***Import an instance***")
         my_map, starts, goals = import_mapf_instance(file)
-        print_mapf_instance(my_map, starts, goals)
-
+        # print_mapf_instance(my_map, starts, goals)
         if args.solver == "CBS":
             print("***Run CBS***")
             cbs = CBSSolver(my_map, starts, goals)

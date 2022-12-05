@@ -171,8 +171,21 @@ class CBSSolver(object):
 
         # compute heuristics for the low-level search
         self.heuristics = []
-        for goal in self.goals:
-            self.heuristics.append(compute_heuristics(my_map, goal))
+        i = 0
+        # make dict for start and goal
+        sg = dict()
+        for i in range(len(self.goals)):
+            sg[self.goals[i]] = self.starts[i] # Starts and goals indexed by goal
+
+        for tup in sg.items():
+            h = compute_heuristics(my_map, tup[0])
+            if not tup[1] in h.keys(): # if this start is not in heuristics
+                print(f"H fail for start: {tup[1]} goal: {tup[0]}")
+                self.starts.remove(tup[1])
+                self.goals.remove(tup[0])
+                self.num_of_agents -= 1
+            else:
+                self.heuristics.append(h)
 
     def push_node(self, node):
         heapq.heappush(self.open_list, (node['cost'], len(node['collisions']), self.num_of_generated, node))
