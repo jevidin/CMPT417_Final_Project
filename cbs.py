@@ -171,15 +171,15 @@ class CBSSolver(object):
 
         # compute heuristics for the low-level search
         self.heuristics = []
-        i = 0
-        # make dict for start and goal
+
+        # Make dict for start and goal
         sg = dict()
         for i in range(len(self.goals)):
             sg[self.goals[i]] = self.starts[i] # Starts and goals indexed by goal
 
         for tup in sg.items():
             h = compute_heuristics(my_map, tup[0])
-            if not tup[1] in h.keys(): # if this start is not in heuristics
+            if not tup[1] in h.keys(): # if this start is not in heuristics then that means there is no path available, remove this agent
                 print(f"H fail for start: {tup[1]} goal: {tup[0]}")
                 self.starts.remove(tup[1])
                 self.goals.remove(tup[0])
