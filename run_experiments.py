@@ -74,7 +74,7 @@ def import_mapf_instance(filename):
         starts.append((sx, sy))
         goals.append((gx, gy))
     f.close()
-    return my_map, starts, goals
+    return my_map, starts, goals, num_agents
 
 
 if __name__ == '__main__':
@@ -98,25 +98,26 @@ if __name__ == '__main__':
     for file in sorted(glob.glob(args.instance)):
 
         print("***Import an instance***")
-        my_map, starts, goals = import_mapf_instance(file)
+        my_map, starts, goals, num_agents = import_mapf_instance(file)
         # print_mapf_instance(my_map, starts, goals)
-        if args.solver == "CBS":
-            print("***Run CBS***")
-            cbs = CBSSolver(my_map, starts, goals)
-            paths = cbs.find_solution(args.disjoint, args.idcbs)
-        elif args.solver == "Independent":
-            print("***Run Independent***")
-            solver = IndependentSolver(my_map, starts, goals)
-            paths = solver.find_solution()
-        elif args.solver == "Prioritized":
-            print("***Run Prioritized***")
-            solver = PrioritizedPlanningSolver(my_map, starts, goals)
-            paths = solver.find_solution()
-        else:
-            raise RuntimeError("Unknown solver!")
+        for ag in range(num_agents+1):
+            if args.solver == "CBS":
+                print(f"***Run CBS*** AGENTS: {ag}")
+                cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
+                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs)
+            elif args.solver == "Independent":
+                print("***Run Independent***")
+                solver = IndependentSolver(my_map, starts, goals)
+                paths = solver.find_solution()
+            elif args.solver == "Prioritized":
+                print("***Run Prioritized***")
+                solver = PrioritizedPlanningSolver(my_map, starts, goals)
+                paths = solver.find_solution()
+            else:
+                raise RuntimeError("Unknown solver!")
 
-        cost = get_sum_of_cost(paths)
-        result_file.write("{},{}\n".format(file, cost))
+            cost = get_sum_of_cost(paths)
+            result_file.write("{},{},{},{},{}\n".format(file, cost, surplus, ag, time))
 
 
         if not args.batch:

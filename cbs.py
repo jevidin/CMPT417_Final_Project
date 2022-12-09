@@ -282,14 +282,13 @@ class CBSSolver(object):
 
         disjoint    - use disjoint splitting or not
         """
-
+        self.start_time = timer.time()
         if idcbs:
             print('RUN IDCBS')
             paths = self.find_solution_idcbs()
             print(f"surplus nodes generated IDCBS {self.num_of_generated - self.num_of_expanded}")
-            return paths
+            return paths, self.num_of_generated - self.num_of_expanded, timer.time() - self.start_time
         print('RUN NORMAL CBS')
-        self.start_time = timer.time()
 
         # Generate the root node
         # constraints   - list of constraints
@@ -330,7 +329,7 @@ class CBSSolver(object):
             p = self.pop_node()
             if not p['collisions']:
                 print(f"surplus nodes generated NORMAL CBS {self.num_of_generated - self.num_of_expanded}")
-                return p['paths']
+                return p['paths'], self.num_of_generated - self.num_of_expanded, timer.time() - self.start_time
             collision = p['collisions'][0]
             if disjoint:
                 constraints = disjoint_splitting(collision)
