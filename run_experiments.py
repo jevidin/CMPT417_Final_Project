@@ -25,13 +25,15 @@ def print_locations(my_map, locations):
     for x in range(len(my_map)):
         for y in range(len(my_map[0])):
             if starts_map[x][y] >= 0:
+                if my_map[x][y]:
+                    print(f"IN WALL AT FOR {x} {y}")
                 to_print += str(starts_map[x][y]) + ' '
             elif my_map[x][y]:
                 to_print += '@ '
             else:
                 to_print += '. '
         to_print += '\n'
-    print(to_print)
+    # print(to_print)
 
 
 def import_mapf_instance(filename):
@@ -52,7 +54,7 @@ def import_mapf_instance(filename):
         for cell in line:
             if cell == '@':
                 my_map[-1].append(True)
-            elif cell == '.':
+            else:
                 my_map[-1].append(False)
     # #agents
     line = f.readline()
@@ -63,10 +65,16 @@ def import_mapf_instance(filename):
     for a in range(num_agents):
         line = f.readline()
         sx, sy, gx, gy = [int(x) for x in line.split(' ')]
+        if my_map[sx][sy]:
+            print(f"SKIP IN WALL START {sx} {sy}")
+            continue
+        if my_map[gx][gy]:
+            print(f"SKIP IN WALL GOAL {gx} {gy}")
+            continue
         starts.append((sx, sy))
         goals.append((gx, gy))
     f.close()
-    return my_map, starts, goals
+    return my_map, starts, goals, num_agents
 
 
 if __name__ == '__main__':
@@ -77,37 +85,49 @@ if __name__ == '__main__':
                         help='Use batch output instead of animation')
     parser.add_argument('--disjoint', action='store_true', default=False,
                         help='Use the disjoint splitting')
+    parser.add_argument('--idcbs', action='store_true', default=False,
+                        help='Run IDCBS')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
+    parser.add_argument('--output', type=str, default="results",
+                        help='The name of output file')
+    parser.add_argument('--repeat', action='store_true', default=False,
+                        help='Rerun CBS cumulatively for each agent')
 
     args = parser.parse_args()
 
 
-    result_file = open("results.csv", "w", buffering=1)
+    result_file = open(f"{args.output}.csv", "w", buffering=1)
 
     for file in sorted(glob.glob(args.instance)):
 
         print("***Import an instance***")
-        my_map, starts, goals = import_mapf_instance(file)
-        print_mapf_instance(my_map, starts, goals)
+        my_map, starts, goals, num_agents = import_mapf_instance(file)
+        # print_mapf_instance(my_map, starts, goals)
+        break_for = False
+        for ag in range(num_agents+1):
+            if not args.repeat:
+                ag = num_agents
+                break_for = True
+            if args.solver == "CBS":
+                print(f"***Run CBS*** AGENTS: {ag}")
+                cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
+                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs)
+            elif args.solver == "Independent":
+                print("***Run Independent***")
+                solver = IndependentSolver(my_map, starts, goals)
+                paths = solver.find_solution()
+            elif args.solver == "Prioritized":
+                print("***Run Prioritized***")
+                solver = PrioritizedPlanningSolver(my_map, starts, goals)
+                paths = solver.find_solution()
+            else:
+                raise RuntimeError("Unknown solver!")
+            if break_for:
+                break
 
-        if args.solver == "CBS":
-            print("***Run CBS***")
-            cbs = CBSSolver(my_map, starts, goals)
-            paths = cbs.find_solution(args.disjoint)
-        elif args.solver == "Independent":
-            print("***Run Independent***")
-            solver = IndependentSolver(my_map, starts, goals)
-            paths = solver.find_solution()
-        elif args.solver == "Prioritized":
-            print("***Run Prioritized***")
-            solver = PrioritizedPlanningSolver(my_map, starts, goals)
-            paths = solver.find_solution()
-        else:
-            raise RuntimeError("Unknown solver!")
-
-        cost = get_sum_of_cost(paths)
-        result_file.write("{},{}\n".format(file, cost))
+            cost = get_sum_of_cost(paths)
+            result_file.write("{},{},{},{},{}\n".format(file, cost, surplus, ag, time))
 
 
         if not args.batch:
