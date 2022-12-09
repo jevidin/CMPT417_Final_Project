@@ -89,18 +89,26 @@ if __name__ == '__main__':
                         help='Run IDCBS')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
+    parser.add_argument('--output', type=str, default="results",
+                        help='The name of output file')
+    parser.add_argument('--repeat', action='store_true', default=False,
+                        help='Rerun CBS cumulatively for each agent')
 
     args = parser.parse_args()
 
 
-    result_file = open("results.csv", "w", buffering=1)
+    result_file = open(f"{args.output}.csv", "w", buffering=1)
 
     for file in sorted(glob.glob(args.instance)):
 
         print("***Import an instance***")
         my_map, starts, goals, num_agents = import_mapf_instance(file)
         # print_mapf_instance(my_map, starts, goals)
+        break_for = False
         for ag in range(num_agents+1):
+            if not args.repeat:
+                ag = num_agents
+                break_for = True
             if args.solver == "CBS":
                 print(f"***Run CBS*** AGENTS: {ag}")
                 cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
@@ -115,6 +123,8 @@ if __name__ == '__main__':
                 paths = solver.find_solution()
             else:
                 raise RuntimeError("Unknown solver!")
+            if break_for:
+                break
 
             cost = get_sum_of_cost(paths)
             result_file.write("{},{},{},{},{}\n".format(file, cost, surplus, ag, time))
