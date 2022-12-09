@@ -54,7 +54,7 @@ def import_mapf_instance(filename):
         for cell in line:
             if cell == '@':
                 my_map[-1].append(True)
-            elif cell == '.':
+            else:
                 my_map[-1].append(False)
     # #agents
     line = f.readline()

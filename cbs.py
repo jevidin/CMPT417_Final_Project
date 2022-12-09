@@ -236,6 +236,7 @@ class CBSSolver(object):
         collisions = p['collisions'][0]
         constraints = standard_splitting(collisions)
         min_t = float('inf')
+        self.num_of_expanded += 1
         for c in constraints:
             p_c = p['constraints'].copy()
             q = {'cost': 0,
@@ -285,7 +286,7 @@ class CBSSolver(object):
         if idcbs:
             print('RUN IDCBS')
             paths = self.find_solution_idcbs()
-            print(f"nodes generated IDCBS {self.num_of_generated}")
+            print(f"surplus nodes generated IDCBS {self.num_of_generated - self.num_of_expanded}")
             return paths
         print('RUN NORMAL CBS')
         self.start_time = timer.time()
@@ -328,7 +329,7 @@ class CBSSolver(object):
         while len(self.open_list) > 0:
             p = self.pop_node()
             if not p['collisions']:
-                print(f"nodes generated NORMAL CBS {self.num_of_generated}")
+                print(f"surplus nodes generated NORMAL CBS {self.num_of_generated - self.num_of_expanded}")
                 return p['paths']
             collision = p['collisions'][0]
             if disjoint:
