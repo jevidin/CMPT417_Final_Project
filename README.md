@@ -9,5 +9,4 @@
 
 ```
 python run_experiments.py --instance instances/berlin.txt --solver CBS --output results_berlin --repeat --batch --idcbs
-
 ```
