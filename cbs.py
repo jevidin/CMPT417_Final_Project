@@ -210,7 +210,7 @@ class CBSSolver(object):
                 'collisions': []}
         for i in range(self.num_of_agents):  # Find initial path for each agent
             if ida:
-                path = ida_star_find(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+                path = ida_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                             i, root['constraints'])
             else:
                 path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
@@ -251,7 +251,7 @@ class CBSSolver(object):
             q['paths'] = p['paths'].copy()
             agent = c['agent']
             if ida:
-                path = ida_star_find(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
+                path = ida_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
             else:
                 path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
             if path:

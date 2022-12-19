@@ -288,13 +288,6 @@ def ida_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
             if not future_goal_constraint:
                 return get_path(curr)
 
-        positive_found = False
-        for dir in range(4): # This for loop first checks all directions for positive constraints, and pushes the first one found. This ensures that no nodes are pushed to open before a positive constraint is pushed.
-            child_loc = move(curr['loc'], dir)
-
-        if positive_found:
-            continue
-
         for dir in range(5): # Only if there are no positive constraints from pervious for loop in all directions do we check for normal node expansion
             child_loc = move(curr['loc'], dir)
             if child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or child_loc[1] >= len(my_map[0]) or my_map[child_loc[0]][child_loc[1]]:
