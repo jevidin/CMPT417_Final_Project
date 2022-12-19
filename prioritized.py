@@ -1,5 +1,5 @@
 import time as timer
-from single_agent_planner import compute_heuristics, a_star, get_sum_of_cost
+from single_agent_planner import compute_heuristics, ida_star, a_star, get_sum_of_cost
 
 
 class PrioritizedPlanningSolver(object):
@@ -35,8 +35,10 @@ class PrioritizedPlanningSolver(object):
 
         print(self.my_map)
         for i in range(self.num_of_agents):  # Find path for each agent
-            path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+            path = ida_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, constraints)
+            # path = ida_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+            #              i, constraints)
             if path is None:
                 raise BaseException('No solutions')
             result.append(path)
@@ -56,6 +58,27 @@ class PrioritizedPlanningSolver(object):
                         constraints.append({'agent': ag, 'loc': [path[idx]], 'timestep': idx, 'goal':False})
                     if idx < len(path) - 1: 
                         constraints.append({'agent': ag, 'loc': [path[idx+1], path[idx]], 'timestep': idx+1, 'goal':False})
+
+         # for j in range (len(path) + 1):
+
+            #         newStep = len(path)
+            #         newStep += j
+
+            #         constraints.append({'agent' : i, 'loc' : [path[len(path) - 1]], 'timestep' : newStep, 'goal':True})
+                
+            # for k in range(len(path)):
+
+            #         if i == j:
+            #             continue
+            #         else:
+
+            #             constraints.append({'agent' : i, 'loc' : [path[k]], 'timestep' : k, 'goal': False})
+
+            #             if k < 1:
+            #                 continue
+            #             else:
+            #                 constraints.append({'agent' : i, 'loc' : [path[k], path[k-1]], 'timestep' : k, 'goal': False})
+            
 
 
         self.CPU_time = timer.time() - start_time

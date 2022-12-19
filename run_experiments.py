@@ -114,12 +114,12 @@ if __name__ == '__main__':
                 cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
                 paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs)
             elif args.solver == "Independent":
-                print("***Run Independent***")
-                solver = IndependentSolver(my_map, starts, goals)
+                print(f"***Run Independent*** AGENTS: {ag}")
+                solver = IndependentSolver(my_map, starts[:ag], goals[:ag])
                 paths = solver.find_solution()
             elif args.solver == "Prioritized":
-                print("***Run Prioritized***")
-                solver = PrioritizedPlanningSolver(my_map, starts, goals)
+                print(f"***Run Prioritized*** AGENTS: {ag}")
+                solver = PrioritizedPlanningSolver(my_map, starts[:ag], goals[:ag])
                 paths = solver.find_solution()
             else:
                 raise RuntimeError("Unknown solver!")
