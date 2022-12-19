@@ -320,7 +320,7 @@ def ida_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
 
     return None  # Failed to find solutions
 
-def ida_star_search(my_map, node, goal_loc, h_values, threshold, depth, given_path, agent):
+def ida_star_search(my_map, node, goal_loc, h_values, threshold, constraint_table):
     # """ my_map      - binary obstacle map
     #     start_loc   - start position
     #     goal_loc    - goal position
@@ -329,48 +329,69 @@ def ida_star_search(my_map, node, goal_loc, h_values, threshold, depth, given_pa
     # """
     # h_value = h_values + apply_heuristic(start_loc, goal_loc)
     # constraint_table = build_constraint_table(constraints, agent)
-    map_size = len(my_map) * len(my_map[0])
+    # map_size = len(my_map) * len(my_map[0])
 
-    f = h_values + compute_heuristics(my_map, goal_loc)
+    f = node['g_val'] + node['h_val']
 
     if f > threshold:
         return f
 
-    if node == goal_loc:
-        given_path = len(path)
-        if depth > given_path:
-            path += [] * (depth - given_path + 1)
-        given_path[depth] = node
-        return node
+    # if node == goal_loc:
+    #     given_path = len(path)
+    #     if depth > given_path:
+    #         path += [] * (depth - given_path + 1)
+    #     given_path[depth] = node
+    #     return node
 
+    if node['loc'] == goal_loc:
+        future_goal_constraint = False
+        for timestep in constraint_table:
+            if timestep > node['t_val']:
+                for con in constraint_table[timestep]:
+                    if con['loc'] == [goal_loc] and not con['positive']:
+                        future_goal_constraint = True
+        if not future_goal_constraint:
+            return node
 
     min_t = float('inf')
-    for dir in range(4): # This for loop first checks all directions for positive constraints, and pushes the first one found. This ensures that no nodes are pushed to open before a positive constraint is pushed.
-        child_loc = move(node, dir)
-        t = ida_star_search(my_map, child_loc, goal_loc, f, threshold, depth + 1, path, agent)
-        if isinstance(t, int):
-            path = len(path)
-            if depth > path:
-                path += [None] * (depth - path + 1)
-            path[depth] = node
+    for dir in range(5): # This for loop first checks all directions for positive constraints, and pushes the first one found. This ensures that no nodes are pushed to open before a positive constraint is pushed.
+        child_loc = move(node['loc'], dir)
+
+        if child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or child_loc[1] >= len(my_map[0]) or my_map[child_loc[0]][child_loc[1]]:
+            continue
+        child = {'loc': child_loc,
+                'g_val': node['g_val'] + 1,
+                'h_val': h_values[child_loc],
+                't_val': node['t_val'] + 1,
+                'parent': node}
+
+        if is_constrained(node['loc'], child['loc'], child['t_val'], constraint_table) == 0: # If constrained then don't use node
+            continue
+
+        t = ida_star_search(my_map, child, goal_loc, h_values, threshold, constraint_table)
+        if not isinstance(t, int):
             return t
+        # if not isinstance(t, int):
+        #     path = len(path)
+        #     if depth > path:
+        #         path += [None] * (depth - path + 1)
+        #     path[depth] = node
+        #     return t
             
         if min_t > t:
             min_t = t
 
-        return min_t
+    return min_t
 
-    return None  # Failed to find solutions
-
-def ida_star_find(my_map, start_loc, goal_loc, h_values, agent):
+def ida_star_find(my_map, start_loc, goal_loc, h_values, agent, constraints):
+    constraint_table = build_constraint_table(constraints, agent)
     h_value = h_values[start_loc]
     root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 't_val': 0, 'parent': None}
     cutoff = root['h_val']
 
     while True:
-        path = []
-        t = ida_star_search(my_map, start_loc, goal_loc, 0, cutoff, 0, path, agent)
+        t = ida_star_search(my_map, root, goal_loc, h_values, cutoff, constraint_table)
+        if not isinstance(t, int):
+            return get_path(t)
         cutoff = t
-        return cutoff
-
     return 
