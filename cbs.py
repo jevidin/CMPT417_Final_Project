@@ -1,7 +1,7 @@
 import time as timer
 import heapq
 import random
-from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost
+from single_agent_planner import compute_heuristics, a_star, ida_star, get_location, get_sum_of_cost
 
 def detect_collision(path1, path2):
     ##############################
@@ -198,7 +198,7 @@ class CBSSolver(object):
         self.num_of_expanded += 1
         return node
 
-    def find_solution_idcbs(self):
+    def find_solution_idcbs(self, ida):
         # Generate the root node
         # constraints   - list of constraints
         # paths         - list of paths, one for each agent
@@ -209,8 +209,12 @@ class CBSSolver(object):
                 'paths': [],
                 'collisions': []}
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
-                          i, root['constraints'])
+            if ida:
+                path = ida_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+                            i, root['constraints'])
+            else:
+                path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+                        i, root['constraints'])
             if path is None:
                 raise BaseException('No solutions')
             root['paths'].append(path)
@@ -220,14 +224,14 @@ class CBSSolver(object):
         threshold = root['cost'] # sum of all path lengths
         self.num_of_generated += 1 # Root node generates
         while True:
-            t = self.search_idcbs(threshold, root['cost'], root)
+            t = self.search_idcbs(threshold, root['cost'], root, ida)
             if not isinstance(t, int):
                 if not t['collisions']: # Check if solution is found
                     return t['paths']
             threshold = t
         return
 
-    def search_idcbs(self, threshold, g, node):
+    def search_idcbs(self, threshold, g, node, ida):
         p = node
         if p['cost'] > threshold:
             return p['cost']
@@ -246,7 +250,10 @@ class CBSSolver(object):
             q['constraints'] = p_c + [c]
             q['paths'] = p['paths'].copy()
             agent = c['agent']
-            path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
+            if ida:
+                path = ida_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
+            else:
+                path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, q['constraints'])
             if path:
                 no_path = False
                 q['paths'][agent] = path
@@ -266,7 +273,7 @@ class CBSSolver(object):
                 q['cost'] = get_sum_of_cost(q['paths'])
                 self.num_of_generated += 1
                 # self.push_node(q)
-                t = self.search_idcbs(threshold, g + q['cost'], q)
+                t = self.search_idcbs(threshold, g + q['cost'], q, ida)
                 if not isinstance(t, int):
                     if not t['collisions']: # Check if solution is found
                         return t
@@ -277,7 +284,7 @@ class CBSSolver(object):
                 raise BaseException('No Solutions')
         return min_t
 
-    def find_solution(self, disjoint, idcbs):
+    def find_solution(self, disjoint, idcbs, ida):
         """ Finds paths for all agents from their start locations to their goal locations
 
         disjoint    - use disjoint splitting or not
@@ -285,9 +292,14 @@ class CBSSolver(object):
         self.start_time = timer.time()
         if idcbs:
             print('RUN IDCBS')
-            paths = self.find_solution_idcbs()
+            paths = self.find_solution_idcbs(ida)
+            time_taken = timer.time() - self.start_time
             print(f"surplus nodes generated IDCBS {self.num_of_generated - self.num_of_expanded}")
-            return paths, self.num_of_generated - self.num_of_expanded, timer.time() - self.start_time
+            if ida:
+                print(f"time taken for IDCBS with IDA* low level: {time_taken}")
+            else:
+                print(f"time taken for IDCBS with Normal A* low level: {time_taken}")
+            return paths, self.num_of_generated - self.num_of_expanded, time_taken
         print('RUN NORMAL CBS')
 
         # Generate the root node
@@ -300,8 +312,12 @@ class CBSSolver(object):
                 'paths': [],
                 'collisions': []}
         for i in range(self.num_of_agents):  # Find initial path for each agent
-            path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+            if ida:
+                path = ida_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, root['constraints'])
+            else:
+                path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
+                            i, root['constraints'])
             if path is None:
                 raise BaseException('No solutions')
             root['paths'].append(path)
@@ -329,7 +345,12 @@ class CBSSolver(object):
             p = self.pop_node()
             if not p['collisions']:
                 print(f"surplus nodes generated NORMAL CBS {self.num_of_generated - self.num_of_expanded}")
-                return p['paths'], self.num_of_generated - self.num_of_expanded, timer.time() - self.start_time
+                time_taken = timer.time() - self.start_time
+                if ida:
+                    print(f"time taken for Normal CBS with IDA* low level: {time_taken}")
+                else:
+                    print(f"time taken for Normal CBS with Normal A* low level: {time_taken}")
+                return p['paths'], self.num_of_generated - self.num_of_expanded, time_taken
             collision = p['collisions'][0]
             if disjoint:
                 constraints = disjoint_splitting(collision)
@@ -353,7 +374,10 @@ class CBSSolver(object):
                     if constraint['positive']: # Task 4: when there is a positive constraint, re plan all other agents with a negative constraint which makes them avoid that positive constraint position.
                         violating_agents = paths_violate_constraint(constraint, q['paths']) # Find all other agents which now have to be re planned with new negative constraints to avoid this positive constraint
                         for ag in violating_agents:
-                            new_path = a_star(self.my_map, self.starts[ag], self.goals[ag], self.heuristics[ag], ag, q['constraints']) # Run A* again, the build_constraint_table function has been updated to account for positive constraints of other agents
+                            if ida:
+                                new_path = ida_star(self.my_map, self.starts[ag], self.goals[ag], self.heuristics[ag], ag, q['constraints'])
+                            else:
+                                new_path = a_star(self.my_map, self.starts[ag], self.goals[ag], self.heuristics[ag], ag, q['constraints']) # Run A* again, the build_constraint_table function has been updated to account for positive constraints of other agents
                             if new_path is None:
                                 no_path = True
                                 break

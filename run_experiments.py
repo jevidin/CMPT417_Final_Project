@@ -114,7 +114,7 @@ if __name__ == '__main__':
             if args.solver == "CBS":
                 print(f"***Run CBS*** AGENTS: {ag}")
                 cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
-                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs)
+                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs, args.ida)
             elif args.solver == "Independent":
                 print(f"***Run Independent*** AGENTS: {ag}")
                 solver = IndependentSolver(my_map, starts[:ag], goals[:ag])

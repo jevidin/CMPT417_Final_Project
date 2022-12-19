@@ -320,7 +320,7 @@ def ida_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
 
     return None  # Failed to find solutions
 
-def ida_star_find(my_map, node, goal_loc, h_values, max, depth, given_path, agent):
+def ida_star_search(my_map, node, goal_loc, h_values, threshold, depth, given_path, agent):
     # """ my_map      - binary obstacle map
     #     start_loc   - start position
     #     goal_loc    - goal position
@@ -333,7 +333,7 @@ def ida_star_find(my_map, node, goal_loc, h_values, max, depth, given_path, agen
 
     f = h_values + compute_heuristics(my_map, goal_loc)
 
-    if f > max:
+    if f > threshold:
         return f
 
     if node == goal_loc:
@@ -344,14 +344,10 @@ def ida_star_find(my_map, node, goal_loc, h_values, max, depth, given_path, agen
         return node
 
 
-
     min_t = float('inf')
     for dir in range(4): # This for loop first checks all directions for positive constraints, and pushes the first one found. This ensures that no nodes are pushed to open before a positive constraint is pushed.
         child_loc = move(node, dir)
-
-        t = ida_star_search(my_map, child_loc, goal_loc, f, max, depth + 1, path, agent)
-
-
+        t = ida_star_search(my_map, child_loc, goal_loc, f, threshold, depth + 1, path, agent)
         if isinstance(t, int):
             path = len(path)
             if depth > path:
@@ -366,16 +362,15 @@ def ida_star_find(my_map, node, goal_loc, h_values, max, depth, given_path, agen
 
     return None  # Failed to find solutions
 
-def ida_star_search(my_map, start_loc, goal_loc, h_values, agent):
-    cutoff = compute_heuristics(my_map, goal_loc)
+def ida_star_find(my_map, start_loc, goal_loc, h_values, agent):
+    h_value = h_values[start_loc]
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 't_val': 0, 'parent': None}
+    cutoff = root['h_val']
 
     while True:
         path = []
-
         t = ida_star_search(my_map, start_loc, goal_loc, 0, cutoff, 0, path, agent)
-
         cutoff = t
-
         return cutoff
 
     return 
