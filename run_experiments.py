@@ -87,6 +87,8 @@ if __name__ == '__main__':
                         help='Use the disjoint splitting')
     parser.add_argument('--idcbs', action='store_true', default=False,
                         help='Run IDCBS')
+    parser.add_argument('--ida', action='store_true', default=False,
+                        help='Run IDA*')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
     parser.add_argument('--output', type=str, default="results",
@@ -120,7 +122,7 @@ if __name__ == '__main__':
             elif args.solver == "Prioritized":
                 print(f"***Run Prioritized*** AGENTS: {ag}")
                 solver = PrioritizedPlanningSolver(my_map, starts[:ag], goals[:ag])
-                paths = solver.find_solution()
+                paths = solver.find_solution(args.ida)
             else:
                 raise RuntimeError("Unknown solver!")
             if break_for:
