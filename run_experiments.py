@@ -87,6 +87,8 @@ if __name__ == '__main__':
                         help='Use the disjoint splitting')
     parser.add_argument('--idcbs', action='store_true', default=False,
                         help='Run IDCBS')
+    parser.add_argument('--ida', action='store_true', default=False,
+                        help='Run IDA*')
     parser.add_argument('--solver', type=str, default=SOLVER,
                         help='The solver to use (one of: {CBS,Independent,Prioritized}), defaults to ' + str(SOLVER))
     parser.add_argument('--output', type=str, default="results",
@@ -112,15 +114,15 @@ if __name__ == '__main__':
             if args.solver == "CBS":
                 print(f"***Run CBS*** AGENTS: {ag}")
                 cbs = CBSSolver(my_map, starts[:ag], goals[:ag])
-                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs)
+                paths, surplus, time = cbs.find_solution(args.disjoint, args.idcbs, args.ida)
             elif args.solver == "Independent":
-                print("***Run Independent***")
-                solver = IndependentSolver(my_map, starts, goals)
+                print(f"***Run Independent*** AGENTS: {ag}")
+                solver = IndependentSolver(my_map, starts[:ag], goals[:ag])
                 paths = solver.find_solution()
             elif args.solver == "Prioritized":
-                print("***Run Prioritized***")
-                solver = PrioritizedPlanningSolver(my_map, starts, goals)
-                paths = solver.find_solution()
+                print(f"***Run Prioritized*** AGENTS: {ag}")
+                solver = PrioritizedPlanningSolver(my_map, starts[:ag], goals[:ag])
+                paths = solver.find_solution(args.ida)
             else:
                 raise RuntimeError("Unknown solver!")
             if break_for:

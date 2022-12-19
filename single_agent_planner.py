@@ -13,7 +13,7 @@ def get_sum_of_cost(paths):
 
 
 def compute_heuristics(my_map, goal):
-    # Use Dijkstra to build a shortest-path tree rooted at the goal location
+    # Use Dijkstra to build a shortest-path my_map rooted at the goal location
     open_list = []
     closed_list = dict()
     root = {'loc': goal, 'cost': 0}
@@ -47,6 +47,7 @@ def compute_heuristics(my_map, goal):
     return h_values
 
 
+
 def build_constraint_table(constraints, agent):
     ##############################
     # Task 1.2/1.3: Return a table that contains the list of constraints of
@@ -56,6 +57,22 @@ def build_constraint_table(constraints, agent):
 
     # Build dictionary indexed by timestep where each timestep has an array of constraints
     constraint_table = dict()
+    
+    # for con in constraints:
+    #     if con['agent'] == agent:
+
+    #         x_tstep = con['timestep']
+    #         x_location = con['loc']
+
+    #         if x_tstep not in constraint_table.keys():
+                
+    #             constraint_table[x_tstep] = [x_location]
+                
+    #         else:
+    #             print("test")
+    #             constraint_table[x_tstep].append(x_location)
+
+
     for con in constraints:
         if (not 'positive' in con.keys()):
             con['positive'] = False
@@ -102,6 +119,7 @@ def get_path(goal_node):
     return path
 
 
+
 def is_constrained(curr_loc, next_loc, next_time, constraint_table):
     ##############################
     # Task 1.2/1.3: Check if a move from curr_loc to next_loc at time step next_time violates
@@ -117,6 +135,21 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
                 else:
                     return 0
     return -1
+    # if next_time not in constraint_table:
+    #     return False
+    # else:
+    #     for x in constraint_table:
+    #         for y in constraint_table[next_time]:
+    #             if len(y) <= 0:
+    #                 continue
+    #             elif y == [curr_loc, next_loc]:
+    #                 return True
+    #             else:
+    #                 if y != [next_loc]:
+    #                     continue
+    #                 else:
+    #                     return True
+    # return False
 
 def push_node(open_list, node):
     heapq.heappush(open_list, (node['g_val'] + node['h_val'], node['h_val'], node['loc'], node))
@@ -148,7 +181,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     closed_list = dict()
     h_value = h_values[start_loc]
     constraint_table = build_constraint_table(constraints, agent)
-    earliest_goal_timestep = 0
+    earliest_goal_curr_tstep = 0
     root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 't_val': 0, 'parent': None}
     push_node(open_list, root)
     closed_list[(root['loc'], root['t_val'])] = root
@@ -160,6 +193,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         #############################
         # Task 1.4: Adjust the goal test condition to handle goal constraints
         # Check for future constraints in the constraint table.
+        earliest_goal_curr_tstep += 1 
+
         if curr['loc'] == goal_loc:
             future_goal_constraint = False
             for timestep in constraint_table:
@@ -206,13 +241,6 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
 
             if is_constrained(curr['loc'], child['loc'], child['t_val'], constraint_table) == 0: # If constrained then don't push node to open_list
                 continue
-            else: # This part is for prioritized planning in task 2, prevents agents from moving on top of another agent which is in its goal position
-                constrained = False
-                for con in constraints:
-                    if [child_loc] == con['loc'] and con['goal'] and agent == con['agent']:
-                        constrained = True
-                if constrained:
-                    continue
 
             if (child['loc'], child['t_val']) in closed_list:
                 existing_node = closed_list[(child['loc'], child['t_val'])]
@@ -224,3 +252,139 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
                 push_node(open_list, child)
 
     return None  # Failed to find solutions
+
+def ida_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
+    # """ my_map      - binary obstacle map
+    #     start_loc   - start position
+    #     goal_loc    - goal position
+    #     agent       - the agent that is being re-planned
+    #     constraints - constraints defining where robot should or cannot go at each timestep
+    # """
+    open_list = []
+    closed_list = dict()
+    h_value = h_values[start_loc]
+    constraint_table = build_constraint_table(constraints, agent)
+    earliest_goal_curr_tstep = 0
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 't_val': 0, 'parent': None}
+    push_node(open_list, root)
+    closed_list[(root['loc'], root['t_val'])] = root
+    map_size = len(my_map) * len(my_map[0])
+    while len(open_list) > 0:
+        if len(closed_list) > map_size*5:
+            break
+        curr = pop_node(open_list)
+        #############################
+        # Task 1.4: Adjust the goal test condition to handle goal constraints
+        # Check for future constraints in the constraint table.
+        earliest_goal_curr_tstep += 1
+
+        if curr['loc'] == goal_loc:
+            future_goal_constraint = False
+            for timestep in constraint_table:
+                if timestep > curr['t_val']:
+                    for con in constraint_table[timestep]:
+                        if con['loc'] == [goal_loc] and not con['positive']:
+                            future_goal_constraint = True
+            if not future_goal_constraint:
+                return get_path(curr)
+
+        for dir in range(5): # Only if there are no positive constraints from pervious for loop in all directions do we check for normal node expansion
+            child_loc = move(curr['loc'], dir)
+            if child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or child_loc[1] >= len(my_map[0]) or my_map[child_loc[0]][child_loc[1]]:
+                continue
+            child = {'loc': child_loc,
+                    'g_val': curr['g_val'] + 1,
+                    'h_val': h_values[child_loc],
+                    't_val': curr['t_val'] + 1,
+                    'parent': curr}
+
+            if is_constrained(curr['loc'], child['loc'], child['t_val'], constraint_table) == 0: # If constrained then don't push node to open_list
+                continue
+
+            if (child['loc'], child['t_val']) in closed_list:
+                existing_node = closed_list[(child['loc'], child['t_val'])]
+                if compare_nodes(child, existing_node):
+                    closed_list[(child['loc'], child['t_val'])] = child
+                    push_node(open_list, child)
+            else:
+                closed_list[(child['loc'], child['t_val'])] = child
+                push_node(open_list, child)
+
+
+    return None  # Failed to find solutions
+
+def ida_star_search(my_map, node, goal_loc, h_values, threshold, constraint_table):
+    # """ my_map      - binary obstacle map
+    #     start_loc   - start position
+    #     goal_loc    - goal position
+    #     agent       - the agent that is being re-planned
+    #     constraints - constraints defining where robot should or cannot go at each timestep
+    # """
+    # h_value = h_values + apply_heuristic(start_loc, goal_loc)
+    # constraint_table = build_constraint_table(constraints, agent)
+    # map_size = len(my_map) * len(my_map[0])
+
+    f = node['g_val'] + node['h_val']
+
+    if f > threshold:
+        return f
+
+    # if node == goal_loc:
+    #     given_path = len(path)
+    #     if depth > given_path:
+    #         path += [] * (depth - given_path + 1)
+    #     given_path[depth] = node
+    #     return node
+
+    if node['loc'] == goal_loc:
+        future_goal_constraint = False
+        for timestep in constraint_table:
+            if timestep > node['t_val']:
+                for con in constraint_table[timestep]:
+                    if con['loc'] == [goal_loc] and not con['positive']:
+                        future_goal_constraint = True
+        if not future_goal_constraint:
+            return node
+
+    min_t = float('inf')
+    for dir in range(5): # This for loop first checks all directions for positive constraints, and pushes the first one found. This ensures that no nodes are pushed to open before a positive constraint is pushed.
+        child_loc = move(node['loc'], dir)
+
+        if child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or child_loc[1] >= len(my_map[0]) or my_map[child_loc[0]][child_loc[1]]:
+            continue
+        child = {'loc': child_loc,
+                'g_val': node['g_val'] + 1,
+                'h_val': h_values[child_loc],
+                't_val': node['t_val'] + 1,
+                'parent': node}
+
+        if is_constrained(node['loc'], child['loc'], child['t_val'], constraint_table) == 0: # If constrained then don't use node
+            continue
+
+        t = ida_star_search(my_map, child, goal_loc, h_values, threshold, constraint_table)
+        if not isinstance(t, int):
+            return t
+        # if not isinstance(t, int):
+        #     path = len(path)
+        #     if depth > path:
+        #         path += [None] * (depth - path + 1)
+        #     path[depth] = node
+        #     return t
+            
+        if min_t > t:
+            min_t = t
+
+    return min_t
+
+def ida_star_find(my_map, start_loc, goal_loc, h_values, agent, constraints):
+    constraint_table = build_constraint_table(constraints, agent)
+    h_value = h_values[start_loc]
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 't_val': 0, 'parent': None}
+    cutoff = root['h_val']
+
+    while True:
+        t = ida_star_search(my_map, root, goal_loc, h_values, cutoff, constraint_table)
+        if not isinstance(t, int):
+            return get_path(t)
+        cutoff = t
+    return 
